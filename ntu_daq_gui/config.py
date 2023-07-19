@@ -13,11 +13,11 @@ def get_config_path():
     if not os.path.exists(config_dir):
         print("Directory \"~/.config\" not found. Unable to retrieve config")
         exit(-1)
-    return os.path.join(config_dir, 'mac-daq-config.conf')
+    return os.path.join(config_dir, 'mac-daq-config.json')
 
 
 def create_default_config():
-    template_path = os.path.join(os.path.dirname(__file__), 'config_template.conf')
+    template_path = os.path.join(os.path.dirname(__file__), 'config_template.json')
     config_path = get_config_path()
     shutil.copy(template_path, config_path)
     print(f"Default configuration file created at {config_path}")
@@ -43,4 +43,3 @@ def get_config():
         print("Configuration file not found. Creating default configuration...")
         create_default_config()
     return load_config(config_path), config_path
-

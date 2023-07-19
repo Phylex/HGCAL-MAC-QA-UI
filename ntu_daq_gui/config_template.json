@@ -1,0 +1,15 @@
+{
+  "procedures": [
+  {
+    "name": "Procedure 1",
+    "executed_file": "script.py",
+    "initial_dut_config": "dut_config.json",
+    "options": {
+      "option1": ["-o1", "value1"],
+      "option2": ["-o2", "value2"],
+      "option3": ["-o3", "value3"]
+    }
+  }
+  ]
+}
+

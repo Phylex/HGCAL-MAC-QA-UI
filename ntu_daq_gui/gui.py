@@ -8,9 +8,18 @@ from functools import partial
 class GUI(tk.Tk):
     def __init__(self, config_params, config_file_path):
         super().__init__()
+        # Initialize the data structures
         self.title("MAC Module Tests")
         self.config_params = config_params
         self.config_file_path = config_file_path
+        print(self.config_params)
+        self.procedures = list(
+                map(lambda p: prc.Procedure(
+                    p.get("name"),
+                    p.get("executed_file", ""),
+                    p.get("options", {}),
+                    p.get("initial_dut_config", "")),
+                    self.config_params.get("procedures", [])))
 
         # Create a notebook (tabs container)
         self.notebook = ttk.Notebook(self)
@@ -23,13 +32,7 @@ class GUI(tk.Tk):
         self.notebook.add(self.procedure_config_tab, text='Configuration')
 
         # Run Control Tab
-        self.procedures = list(
-                map(lambda p: prc.Procedure(
-                    p.get("name"),
-                    p.get("executed_file", ""),
-                    p.get("options", {}),
-                    p.get("initial_dut_config", "")),
-                    self.config_params.get("procedures", [])))
+
         self.procedure_var = tk.StringVar()
         self.procedure_var.set(self.procedures[0].name)
 
@@ -69,7 +72,7 @@ class GUI(tk.Tk):
         # Config Parameters Tab
         self.config_params.pop("procedures", None)
 
-        self.setup_procedure_widgets()
+        self.setup_procedure_widgets(self.procedure_config_tab)
 
         # Configure grid weights
         self.run_control_tab.columnconfigure(1, weight=1)
@@ -83,33 +86,32 @@ class GUI(tk.Tk):
         with open(self.config_file_path, 'w') as f:
             json.dump(self.config_params, f)
 
-    def setup_procedure_widgets(self):
-        procedures_frame = ttk.Frame(self.procedure_config_tab)
-        procedures_frame.pack()
+    def setup_procedure_widgets(self, frame):
+        frame.grid_forget()
 
-        add_button = ttk.Button(procedures_frame,
+        add_button = ttk.Button(frame,
                                 text="Add Procedure",
-                                command=self.add_procedure)
-        add_button.pack()
-        self.create_procedures_widgets(procedures_frame)
-
-    def create_procedures_widgets(self, parent):
+                                command=partial(self.add_procedure, frame))
+        add_button.grid()
         for i, procedure in enumerate(self.procedures):
-            proc_frame = ttk.Frame(parent, borderwidth=2, relief="groove")
-            proc_frame.pack(padx=5, pady=5, fill='x')
-            prc.ProcedureConfigUI(proc_frame, procedure)
-            ttk.Button(proc_frame, text="Remove Procedure",
-                       command=partial(self.remove_procedure, i, parent))
+            self.draw_procedure(frame, procedure, i)
 
-    def add_procedure(self):
-        pcui = prc.ProcedureCreationUI(self.procedure_config_tab)
+    def draw_procedure(self, frame, procedure, i):
+        proc_frame = ttk.Frame(frame, borderwidth=2, relief="groove")
+        proc_frame.grid(padx=5, pady=5)
+        prc.ProcedureConfigUI(proc_frame, procedure)
+        ttk.Button(proc_frame, text="Remove Procedure",
+                   command=partial(self.remove_procedure, i, frame))
+
+    def add_procedure(self, parent):
+        pcui = prc.ProcedureCreationUI(parent)
         self.procedures.append(pcui.result)
-        self.create_procedures_widgets(self.procedure_config_tab)
+        self.draw_procedure(parent, pcui.result, len(self.procedures) - 1)
 
     def remove_procedure(self, proc_idx, parent):
         parent.pack_forget()  # Remove the procedure frame from the GUI
         self.procedures.pop(proc_idx)
-        self.create_procedures_widgets(parent)
+        self.setup_procedure_widgets(parent)
 
     def run_procedure(self):
         procedure = self.procedure_var.get()
@@ -130,5 +132,7 @@ class GUI(tk.Tk):
 
 
 if __name__ == '__main__':
-    gui = GUI()
+    with open('./config_template.json', 'r') as cf:
+        config = json.load(cf)
+    gui = GUI(config, './config_template.json')
     gui.mainloop()
