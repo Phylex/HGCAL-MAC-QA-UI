@@ -1,0 +1,11 @@
+{
+  "procedures": ["Procedure 1", "Procedure 2", "Procedure 3"],
+  "Parameter 1": "Value 1",
+  "Parameter 2": 42,
+  "Parameter 3": ["Option 1", "Option 2", "Option 3"],
+  "Parameter 4": {
+    "Subparameter 1": true,
+    "Subparameter 2": "abc"
+  }
+}
+
