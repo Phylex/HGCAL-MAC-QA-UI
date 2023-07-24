@@ -21,12 +21,12 @@ class Procedure:
         self.running = False
 
     def serialize(self):
-        return json.dumps({
+        return {
             'name': self.name,
             'executed_file': self.executed_file,
             'options': self.options,
             'initial_dut_config': self.initial_dut_config
-        })
+        }
 
     @classmethod
     def deserialize(cls, json_string):
@@ -54,7 +54,6 @@ class Procedure:
         for option in self.options:
             run_command_args.append(str(option[0]))
             run_command_args.append(str(option[1]))
-
 
 class OptionDialog(simpledialog.Dialog):
     def body(self, master):
@@ -96,21 +95,21 @@ class ProcedureCreationUI(simpledialog.Dialog):
         self.exec_file_entry = tk.Entry(master)
         self.exec_file_entry.grid(row=1, column=1)
         self.exec_file_button = tk.Button(
-                master,
-                text="Browse",
-                command=self.browse_executed_file).grid(row=1, column=2)
+            master,
+            text="Browse",
+            command=self.browse_executed_file).grid(row=1, column=2)
 
         self.init_conf_entry = tk.Entry(master)
         self.init_conf_entry.grid(row=2, column=1)
         self.init_conf_button = tk.Button(
-                master,
-                text="Browse",
-                command=self.browse_init_config).grid(row=2, column=2)
+            master,
+            text="Browse",
+            command=self.browse_init_config).grid(row=2, column=2)
 
         self.add_option_button = tk.Button(
-                master,
-                text="Add Command Option",
-                command=self.add_option).grid(row=3, column=1)
+            master,
+            text="Add Command Option",
+            command=self.add_option).grid(row=3, column=1)
 
         tk.Label(master, text="Options")
         self.tree = ttk.Treeview(master,
@@ -130,14 +129,13 @@ class ProcedureCreationUI(simpledialog.Dialog):
 
     def browse_init_config(self):
         file_path = filedialog.askopenfilename(
-                title="Select Initial DUT Config")
+            title="Select Initial DUT Config")
         if file_path:
             self.init_conf_entry.delete(0, tk.END)
             self.init_conf_entry.insert(tk.END, file_path)
 
     def add_option(self):
         od = OptionDialog(self.__mas)
-        print(od.result)
         self.options[od.result[0]] = (od.result[1], od.result[2])
         self.tree.insert("", "end", values=od.result)
 
@@ -156,70 +154,59 @@ class ProcedureConfigUI:
         self.parent = parent
         self.procedure = procedure
 
-        self.name_label = tk.Label(parent, text="Name:")
-        self.name_label.pack()
-        self.name_entry = tk.Entry(parent)
-        self.name_entry.pack()
-
-        self.executed_file_label = tk.Label(parent, text="Executed File:")
-        self.executed_file_label.pack()
-        self.executed_file_entry = tk.Entry(parent)
-        self.executed_file_entry.pack()
-        self.executed_file_button = tk.Button(
-                parent, text="Browse", command=self.browse_executed_file)
-        self.executed_file_button.pack()
-
-        self.init_config_label = tk.Label(
-                parent, text="Initial DUT Config:")
-        self.init_config_label.pack()
-        self.init_config_entry = tk.Entry(parent)
-        self.init_config_entry.pack()
-        self.init_config_button = tk.Button(
-                parent, text="Browse", command=self.browse_initial_dut_config)
-        self.init_config_button.pack()
-
-        self.options_label = tk.Label(parent, text="Options:")
-        self.options_label.pack()
-
-        self.options_frame = tk.Frame(parent)
-        self.options_frame.pack()
-
-        self.add_option_button = tk.Button(parent,
-                                           text="Add Option",
-                                           command=self.add_option)
-        self.add_option_button.pack()
-
-        self.load_config()
-
-    def load_config(self):
+        self.name_label = ttk.Label(parent, text="Description:")
+        self.name_label.grid(row=0, column=0)
+        self.name_entry = ttk.Entry(parent)
+        self.name_entry.grid(row=0, column=1)
         self.name_entry.insert(tk.END, self.procedure.name)
-        self.executed_file_entry.insert(tk.END, self.procedure.executed_file)
-        self.init_config_entry.insert(tk.END, self.procedure.initial_dut_config)
 
-        for option_name, (flag, value) in self.procedure.options.items():
-            self.create_option_entry(option_name, flag, value)
+        self.executed_file_label = ttk.Label(parent, text="Executed File:")
+        self.executed_file_label.grid(row=1, column=0)
+        self.executed_file_entry = ttk.Entry(parent)
+        self.executed_file_entry.grid(row=1, column=1)
+        self.executed_file_entry.insert(tk.END, self.procedure.executed_file)
+        self.executed_file_button = ttk.Button(
+            parent, text="Browse", command=self.browse_executed_file)
+        self.executed_file_button.grid(row=1, column=2)
+
+        self.init_config_label = ttk.Label(
+            parent, text="Initial DUT Config:")
+        self.init_config_label.grid(row=2, column=0)
+        self.init_config_entry = ttk.Entry(parent)
+        self.init_config_entry.grid(row=2, column=1)
+        self.init_config_entry.insert(
+            tk.END, self.procedure.initial_dut_config)
+        self.init_config_button = ttk.Button(
+            parent, text="Browse", command=self.browse_initial_dut_config)
+        self.init_config_button.grid(row=2, column=2)
+
+        self.options_label = ttk.Label(parent, text="Options")
+        self.options_label.grid(row=3, column=0)
+        self.add_option_button = ttk.Button(parent,
+                                            text="Add Option",
+                                            command=self.add_option)
+        self.add_option_button.grid(row=3, column=2)
+        self.options_frame = ttk.Frame(parent, relief="solid", padding=5)
+        self.options_frame.grid(columnspan=3)
+        self.options_frame.grid_rowconfigure(0, weight=1)
+        self.options_frame.grid_columnconfigure(0, weight=1)
+        self.refresh_option_entries()
 
     def add_option(self):
         od = OptionDialog(self.parent)
         self.procedure.add_option(*od.result)
-        self.create_option_entry(*od.result)
+        self.refresh_option_entries()
 
-    def create_option_entry(self, option_name, flag, value):
-        option_frame = tk.Frame(self.options_frame)
-        option_frame.pack(pady=5)
-
-        option_label = tk.Label(option_frame, text=f"Option: {option_name}")
-        option_label.pack(side=tk.LEFT)
-
-        flag_label = tk.Label(option_frame, text=f"Flag: {flag}")
-        flag_label.pack(side=tk.LEFT, padx=5)
-
-        value_label = tk.Label(option_frame, text=f"Value: {value}")
-        value_label.pack(side=tk.LEFT)
-
-        remove_button = tk.Button(option_frame, text="Remove",
-                                  command=lambda: self.remove_option(option_name))
-        remove_button.pack(side=tk.LEFT, padx=5)
+    def create_option_entry(self, option_name, flag, value, idx):
+        option_label = ttk.Label(self.options_frame, text=f"{option_name}")
+        option_label.grid(row=idx, column=0)
+        flag_label = ttk.Label(self.options_frame, text=f"{flag}")
+        flag_label.grid(row=idx, column=1)
+        value_label = ttk.Label(self.options_frame, text=f"{value}")
+        value_label.grid(row=idx, column=2)
+        remove_button = ttk.Button(self.options_frame, text="Remove",
+                                   command=lambda: self.remove_option(option_name))
+        remove_button.grid(row=idx, column=3)
 
     def remove_option(self, option_name):
         if option_name in self.procedure.options:
@@ -229,9 +216,14 @@ class ProcedureConfigUI:
     def refresh_option_entries(self):
         for child in self.options_frame.winfo_children():
             child.destroy()
-
-        for option_name, (flag, value) in self.procedure.options.items():
-            self.create_option_entry(option_name, flag, value)
+        if len(self.procedure.options) > 0:
+            ttk.Label(self.options_frame, text="Description").grid(
+                row=0, column=0)
+            ttk.Label(self.options_frame, text="Cmd Flag").grid(
+                row=0, column=1)
+            ttk.Label(self.options_frame, text="Value").grid(row=0, column=2)
+        for i, (option_name, (flag, value)) in enumerate(self.procedure.options.items()):
+            self.create_option_entry(option_name, flag, value, i+1)
 
     def check_file_exists(self, filepath):
         return os.path.isfile(filepath)
@@ -244,7 +236,8 @@ class ProcedureConfigUI:
             self.executed_file_entry.insert(tk.END, file_path)
 
     def browse_initial_dut_config(self):
-        file_path = filedialog.askopenfilename(title="Select Initial DUT Config")
+        file_path = filedialog.askopenfilename(
+            title="Select Initial DUT Config")
         if file_path:
             self.procedure.initial_dut_config = file_path
             self.init_config_entry.delete(0, tk.END)
