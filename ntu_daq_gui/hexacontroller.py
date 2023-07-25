@@ -161,36 +161,43 @@ class HexactrlConfigUI(ttk.Frame):
         """
         Set up the UI of the Hexactrl interface
         """
-        ttk.Label(self, text="Hostname:").grid(row=0, column=0, padx=2, pady=2)
+        ttk.Label(self, text="Name:").grid(row=0, column=0, padx=2, pady=2)
+        self.name_var = tk.StringVar()
+        self.name_var.set(self.hexactrl.name)
+        self.name_var.trace_add("write", self.update_name)
+        self.name_entry = ttk.Entry(self, textvariable=self.name_var)
+        self.name_entry.grid(row=0, column=2)
+        
+        ttk.Label(self, text="Hostname:").grid(row=1, column=0, padx=2, pady=2)
         self.host_var = tk.StringVar()
         self.host_var.set(self.hexactrl.hostname)
         self.host_var.trace_add("write", self.update_hostname)
         self.host_entry = ttk.Entry(self, textvariable=self.host_var)
-        self.host_entry.grid(row=0, column=2)
+        self.host_entry.grid(row=1, column=2)
 
         ttk.Label(self, text="Port:").grid(
-                row=1, column=0, padx=2, pady=2)
+                row=2, column=0, padx=2, pady=2)
         self.port_var = tk.IntVar()
         self.port_var.set(self.hexactrl.port)
         self.port_var.trace_add("write", self.update_port)
         self.port_entry = ttk.Entry(self, textvariable=self.port_var)
-        self.port_entry.grid(row=1, column=2)
+        self.port_entry.grid(row=2, column=2)
 
         ttk.Label(self, text="SSH Username:").grid(
-            row=2, column=0, padx=2, pady=2)
+            row=3, column=0, padx=2, pady=2)
         self.user_var = tk.StringVar()
         self.user_var.set(self.hexactrl.username)
         self.user_var.trace_add("write", self.update_username)
         self.user_entry = ttk.Entry(self, textvariable=self.user_var)
-        self.user_entry.grid(row=2, column=2)
+        self.user_entry.grid(row=3, column=2)
 
         ttk.Label(self, text="SSH Password:").grid(
-            row=3, column=0, padx=2, pady=2)
+            row=4, column=0, padx=2, pady=2)
         self.pswd_var = tk.StringVar()
         self.pswd_var.set(self.hexactrl.password)
         self.pswd_var.trace_add("write", self.update_password)
         self.pswd_entry = ttk.Entry(self, textvariable=self.pswd_var)
-        self.pswd_entry.grid(row=3, column=2)
+        self.pswd_entry.grid(row=4, column=2)
 
 
         # The startup commands are built using entries that
@@ -326,3 +333,6 @@ class HexactrlConfigUI(ttk.Frame):
 
     def update_password(self, *args):
         self.hexactrl.password = self.pswd_var.get()
+
+    def update_name(self, *args):
+        self.hexactrl.name = self.name_var.get()
