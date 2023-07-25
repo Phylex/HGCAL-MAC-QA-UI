@@ -21,7 +21,12 @@ class Hexacontroller:
                  startup_commands=[],
                  daq_server_start_cmd="",
                  sc_server_start_cmd="",
-                 shutdown_commands=[]):
+                 shutdown_commands=[],
+                 available_images=[], name=None):
+        if name is not None:
+            self.name = name
+        else:
+            self.name = hostname
         self.username = username
         self.port = port
         self.password = password
@@ -30,7 +35,9 @@ class Hexacontroller:
         self.daq_server_start_cmd = daq_server_start_cmd
         self.sc_server_start_cmd = sc_server_start_cmd
         self.shutdown_commands = shutdown_commands
+        self.available_images = available_images
         self.command_running = False
+        self.connected = False
 
     def connect(self):
         self.ssh_client = paramiko.SSHClient()
@@ -146,6 +153,7 @@ class HexactrlConfigUI(ttk.Frame):
         self.hexactrl = hexactrl
         self.init_command_entries = []
         self.shutdown_command_entries = []
+        self.grid(pady=5, padx=5)
 
         self.populate()
 
@@ -154,76 +162,82 @@ class HexactrlConfigUI(ttk.Frame):
         Set up the UI of the Hexactrl interface
         """
         ttk.Label(self, text="Hostname:").grid(row=0, column=0, padx=2, pady=2)
-        ttk.Label(self, text="SSH Username:").grid(
-            row=1, column=0, padx=2, pady=2)
-        ttk.Label(self, text="SSH Password:").grid(
-            row=2, column=0, padx=2, pady=2)
-        self.host_entry = ttk.Entry(self)
+        self.host_var = tk.StringVar()
+        self.host_var.set(self.hexactrl.hostname)
+        self.host_var.trace_add("write", self.update_hostname)
+        self.host_entry = ttk.Entry(self, textvariable=self.host_var)
         self.host_entry.grid(row=0, column=2)
-        self.host_entry.insert(tk.END, self.hexactrl.hostname)
-        self.user_entry = ttk.Entry(self)
-        self.user_entry.grid(row=1, column=2)
-        self.user_entry.insert(tk.END, self.hexactrl.username)
-        self.pswd_entry = ttk.Entry(self)
-        self.pswd_entry.grid(row=2, column=2)
-        self.pswd_entry.insert(tk.END, self.hexactrl.password)
-        self.conn_frame = ttk.Frame(self)
-        self.connect_button = ttk.Button(
-            self.conn_frame, text="Connect", command=self.connect)
-        self.connect_button.grid(row=3, column=0)
-        self.discon_button = ttk.Button(
-            self.conn_frame, text="Disconnect", command=self.disconnect)
-        self.discon_button.grid(row=3, column=1)
-        self.conn_indicator = tk.Label(
-            self.conn_frame, width=20, height=10, bg="darkgray")
-        self.conn_indicator.grid(row=3, column=2)
+
+        ttk.Label(self, text="Port:").grid(
+                row=1, column=0, padx=2, pady=2)
+        self.port_var = tk.IntVar()
+        self.port_var.set(self.hexactrl.port)
+        self.port_var.trace_add("write", self.update_port)
+        self.port_entry = ttk.Entry(self, textvariable=self.port_var)
+        self.port_entry.grid(row=1, column=2)
+
+        ttk.Label(self, text="SSH Username:").grid(
+            row=2, column=0, padx=2, pady=2)
+        self.user_var = tk.StringVar()
+        self.user_var.set(self.hexactrl.username)
+        self.user_var.trace_add("write", self.update_username)
+        self.user_entry = ttk.Entry(self, textvariable=self.user_var)
+        self.user_entry.grid(row=2, column=2)
+
+        ttk.Label(self, text="SSH Password:").grid(
+            row=3, column=0, padx=2, pady=2)
+        self.pswd_var = tk.StringVar()
+        self.pswd_var.set(self.hexactrl.password)
+        self.pswd_var.trace_add("write", self.update_password)
+        self.pswd_entry = ttk.Entry(self, textvariable=self.pswd_var)
+        self.pswd_entry.grid(row=3, column=2)
+
 
         # The startup commands are built using entries that
         # automatically update the state of the variables stored in
         # the hexacontroller
         init_cmd_label = ttk.Label(self, text="Initialization Commands")
-        init_cmd_label.grid(row=4, column=1)
+        init_cmd_label.grid(row=5, column=0)
         self.add_init_cmd_button = ttk.Button(
             self, text="Add startup Command", command=self.add_startup_cmd)
-        self.add_init_cmd_button.grid(row=5, column=0)
+        self.add_init_cmd_button.grid(row=5, column=2)
         self.init_cmd_frame = ttk.Frame(self, relief="groove", padding=5)
-        self.init_cmd_frame.grid(row=6, columnspan=2)
+        self.init_cmd_frame.grid(row=6, columnspan=3)
 
         # The shutdown commands are built using entries that
         # automatically update the state of the variables stored in
         # the hexacontroller
         shutdown_cmd_label = ttk.Label(self, text="Shutdown Commands")
-        shutdown_cmd_label.grid(row=7, column=1)
+        shutdown_cmd_label.grid(row=7, column=0, pady=5)
         self.add_shutdown_cmd_button = ttk.Button(
             self, text="Add shutdown Command", command=self.add_shutdown_cmd)
-        self.add_shutdown_cmd_button.grid(row=7, column=2)
+        self.add_shutdown_cmd_button.grid(row=7, column=2, pady=5)
         self.shutdown_cmd_frame = ttk.Frame(self, relief="groove", padding=5)
-        self.shutdown_cmd_frame.grid(row=8, columnspan=2)
+        self.shutdown_cmd_frame.grid(row=8, columnspan=3)
 
+        # Variable for storing the start command for the daq server
+        self.daq_start_var = tk.StringVar()
+        self.daq_start_var.set(self.hexactrl.daq_server_start_cmd)
+        self.daq_start_var.trace_add("write", self.update_daq_start_command)
         daq_server_cmd_label = ttk.Label(self, text="DAQ Server Start Command")
         daq_server_cmd_label.grid(row=9, column=0)
-        daq_server_cmd_entry = ttk.Entry(self)
+        daq_server_cmd_entry = ttk.Entry(self, textvariable=self.daq_start_var)
         daq_server_cmd_entry.grid(row=9, column=1, columnspan=2)
         daq_server_cmd_entry.insert(tk.END, self.hexactrl.daq_server_start_cmd)
 
+        # Variable for storing the start command for the slow control server
+        self.sc_start_var = tk.StringVar()
+        self.sc_start_var.set(self.hexactrl.sc_server_start_cmd)
+        self.sc_start_var.trace_add("write", self.update_sc_start_command)
         sc_server_cmd_label = ttk.Label(
             self, text="Slow control Start Command")
         sc_server_cmd_label.grid(row=10, column=0)
-        sc_server_cmd_entry = ttk.Entry(self)
+        sc_server_cmd_entry = ttk.Entry(self, textvariable=self.sc_start_var)
         sc_server_cmd_entry.grid(row=10, column=1, columnspan=2)
         sc_server_cmd_entry.insert(tk.END, self.hexactrl.daq_server_start_cmd)
 
-    def update_connection_indication(self):
-        self.connect_button['state'] = tk.NORMAL if not self.hexactrl.connected else tk.DISABLED
-        self.discon_button['state'] = tk.NORMAL if self.hexactrl.connected else tk.DISABLED
-        self.conn_indicator.configure(
-            bg="green" if self.hexactrl.connected else "darkgray")
-
-    def connect(self):
-        self.hexactrl.connected=True
-
-    def disconnect(self):
-        self.hexactrl.connected=False
+        self.refresh_init_cmds()
+        self.refresh_shutdown_cmds()
 
     # These functions allow for the addition and removal of commands to the
     # startup procedure of the hexacontroller
@@ -236,6 +250,7 @@ class HexactrlConfigUI(ttk.Frame):
         self.refresh_init_cmds()
 
     def update_init_cmds(self, idx):
+        print("updating startup commands")
         self.hexactrl.startup_commands[idx] = \
             self.init_command_entries[idx].get()
 
@@ -245,7 +260,7 @@ class HexactrlConfigUI(ttk.Frame):
         self.init_command_entries = []
         for i, cmd in enumerate(self.hexactrl.startup_commands):
             entry_var = tk.StringVar()
-            entry_var.set("")
+            entry_var.set(cmd)
             entry_var.trace_add(
                 "write",
                 lambda *args, idx=i: self.update_init_cmds(idx))
@@ -262,6 +277,7 @@ class HexactrlConfigUI(ttk.Frame):
     # These functions allow for the addition and removal of commands to the
     # startup procedure of the hexacontroller
     def update_shutdown_cmds(self, idx):
+        print("updating shutdown commands")
         self.hexactrl.shutdown_commands[idx] = \
             self.shutdown_command_entries[idx].get()
 
@@ -279,7 +295,7 @@ class HexactrlConfigUI(ttk.Frame):
         self.shutdown_command_entries = []
         for i, cmd in enumerate(self.hexactrl.shutdown_commands):
             entry_var = tk.StringVar()
-            entry_var.set("")
+            entry_var.set(cmd)
             entry_var.trace_add(
                 "write",
                 lambda *args, idx=i: self.update_shutdown_cmds(idx))
@@ -292,3 +308,21 @@ class HexactrlConfigUI(ttk.Frame):
                                 text="Remove",
                                 command=lambda: self.remove_shutdown_cmd(i))
             rm_btn.grid(row=i, column=1)
+
+    def update_daq_start_command(self, *args):
+        self.hexactrl.daq_server_start_cmd = self.daq_start_var.get()
+
+    def update_sc_start_command(self, *args):
+        self.hexactrl.sc_server_start_cmd = self.sc_start_var.get()
+
+    def update_hostname(self, *args):
+        self.hexactrl.hostname = self.host_var.get()
+
+    def update_port(self, *args):
+        self.hexactrl.port = self.port_var.get()
+
+    def update_username(self, *args):
+        self.hexactrl.username = self.user_var.get()
+
+    def update_password(self, *args):
+        self.hexactrl.password = self.pswd_var.get()
